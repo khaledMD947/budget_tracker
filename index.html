@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>পরিবার ও ব্যক্তিগত বাজেট ট্র্যাকার</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase App & Database SDK (v8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen">
+
+    <!-- HEADER -->
+    <header id="main-header" class="bg-emerald-700 text-white shadow-md sticky top-0 z-40 hidden">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center font-bold text-xl">
+                    <i class="fa-solid fa-basket-shopping"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">স্মার্ট বাজেট ও ফর্দ</h1>
+                    <span id="view-indicator-tag" class="text-[11px] bg-emerald-800 px-2 py-0.5 rounded text-emerald-200 font-medium">পারিবারিক</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Notification Bell -->
+                <button onclick="toggleNotificationModal()" class="relative p-2 rounded-lg bg-emerald-800 hover:bg-emerald-900 transition">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span id="notif-badge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
+                </button>
+
+                <!-- User Info -->
+                <div class="text-right hidden sm:block">
+                    <p id="nav-user-name" class="font-bold text-sm leading-tight">-</p>
+                    <p id="user-role-badge" class="text-[10px] text-emerald-200">-</p>
+                </div>
+
+                <!-- Logout Button -->
+                <button onclick="logout()" class="p-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 rounded-lg transition" title="লগআউট">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- AUTH SCREEN (Login / Register) -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border p-6 w-full max-w-md space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">স্বাগতম!</h2>
+                <p class="text-xs text-slate-500">আপনার পরিবার ও ব্যক্তিগত খরচ এবং বাজারের হিসাব রাখুন এক জায়গায়</p>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex border-b">
+                <button id="tab-login-btn" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-center font-semibold text-emerald-600 border-b-2 border-emerald-600">লগইন</button>
+                <button id="tab-register-btn" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-center font-semibold text-slate-400 border-b-2 border-transparent">রেজিস্ট্রেশন</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">মোবাইল নম্বর</label>
+                    <input type="text" id="login-phone" placeholder="০১৭xxxxxxxx" required class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-emerald-600 text-sm">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">লগইন করুন</button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">আপনার নাম</label>
+                    <input type="text" id="reg-name" placeholder="যেমন: রহিম আহমেদ" required class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-emerald-600 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">মোবাইল নম্বর</label>
+                    <input type="text" id="reg-phone" placeholder="০১৭xxxxxxxx" required class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-emerald-600 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">অ্যাকাউন্টের ধরন</label>
+                    <select id="reg-type" onchange="toggleFamilyNameInput()" class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-emerald-600 text-sm bg-white">
+                        <option value="head">পরিবার প্রধান (নতুন পরিবার তৈরি করবেন)</option>
+                        <option value="member">পরিবার সদস্য (প্রধানের সাথে যুক্ত হবেন)</option>
+                        <option value="solo">একক ব্যবহারকারী (পারসোনাল)</option>
+                    </select>
+                </div>
+                <div id="family-name-container">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">পরিবারের নাম</label>
+                    <input type="text" id="reg-family-name" placeholder="যেমন: আহমেদ পরিবার" class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-emerald-600 text-sm">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">অ্যাকাউন্ট খুলুন</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="dashboard-screen" class="max-w-6xl mx-auto px-4 py-6 space-y-6 hidden">
+
+        <!-- CONTROLS & FILTER BAR -->
+        <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border">
+            <!-- View Switcher -->
+            <div class="flex bg-slate-100 p-1 rounded-xl">
+                <button id="tab-btn-family" onclick="switchDashboardView('family')" class="px-4 py-2 rounded-lg font-semibold text-sm bg-emerald-600 text-white">👨‍👩‍👧‍👦 পারিবারিক</button>
+                <button id="tab-btn-personal" onclick="switchDashboardView('personal')" class="px-4 py-2 rounded-lg font-semibold text-sm text-slate-600 hover:bg-slate-200">👤 পারসোনাল</button>
+            </div>
+
+            <!-- Month Filter & Quick Action -->
+            <div class="flex items-center gap-2">
+                <input type="month" id="filter-month" onchange="renderDashboard()" class="px-3 py-1.5 border rounded-xl text-sm focus:outline-none focus:border-emerald-600 bg-white">
+                <button onclick="openModal('modal-monthly-report')" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center gap-1 border border-indigo-200">
+                    <i class="fa-solid fa-file-invoice"></i> মাস শেষের রিপোর্ট
+                </button>
+            </div>
+        </div>
+
+        <!-- SUMMARY CARDS -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 space-y-1">
+                <p class="text-xs font-semibold text-slate-500">মোট জমা / আয়</p>
+                <h3 id="card-total-income" class="text-xl font-extrabold text-emerald-600">৳০</h3>
+                <button onclick="openModal('modal-add-income')" class="text-[11px] text-emerald-600 font-bold hover:underline">+ আয় যোগ করুন</button>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 space-y-1">
+                <p class="text-xs font-semibold text-slate-500">পরিকল্পিত বাজেট</p>
+                <h3 id="card-total-budget" class="text-xl font-extrabold text-blue-600">৳০</h3>
+                <div id="head-controls">
+                    <button onclick="openModal('modal-set-budget')" class="text-[11px] text-blue-600 font-bold hover:underline">বাজেট নির্ধারণ করুন</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-rose-100 space-y-1">
+                <p class="text-xs font-semibold text-slate-500">মোট খরচ</p>
+                <h3 id="card-total-expense" class="text-xl font-extrabold text-rose-600">৳০</h3>
+                <button onclick="openModal('modal-add-expense')" class="text-[11px] text-rose-600 font-bold hover:underline">+ খরচ যোগ করুন</button>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-1">
+                <p class="text-xs font-semibold text-slate-500">অবশিষ্ট ব্যালেন্স</p>
+                <h3 id="card-remaining-balance" class="text-xl font-extrabold text-slate-800">৳০</h3>
+                <span class="text-[10px] text-slate-400">বাজেট হতে বাকি</span>
+            </div>
+        </div>
+
+        <!-- OVER BUDGET WARNING ALERT -->
+        <div id="over-budget-alert" class="hidden bg-rose-500 text-white p-3 rounded-xl shadow-sm flex items-center gap-3 text-sm font-semibold">
+            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+            <span>সতর্কতা: আপনার চলতি মাসের মোট খরচ নির্ধারিত বাজেট অতিক্রম করেছে!</span>
+        </div>
+
+        <!-- CHARTS SECTION -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-3">
+                <h4 class="font-bold text-sm text-slate-700">বাজেট ও খরচ তুলনামূলক চিত্র</h4>
+                <div class="h-48">
+                    <canvas id="chart-budget-overview"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-3">
+                <h4 class="font-bold text-sm text-slate-700">ক্যাটাগরি ভিত্তিক খরচের খাত</h4>
+                <div class="h-48">
+                    <canvas id="chart-category-breakdown"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAMILY MEMBERS PANEL (FAMILY VIEW ONLY) -->
+        <div id="section-family-members-panel" class="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">পরিবারের সদস্যবৃন্দ</h3>
+                <button onclick="openModal('modal-add-member')" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-200 transition">+ নতুন সদস্য যুক্ত করুন</button>
+            </div>
+            <div id="family-members-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- Dynamically Rendered -->
+            </div>
+        </div>
+
+        <!-- BAZAR / SHOPPING LIST SECTION -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-base text-slate-800">বাজারের তালিকা ও ফর্দ</h3>
+                    <p class="text-xs text-slate-400">ড্রাফট তৈরি করুন বা বাজারে পাঠিয়ে কেনাকাটা সম্পন্ন করুন</p>
+                </div>
+                <button onclick="openModal('modal-add-bazar')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1">
+                    <i class="fa-solid fa-plus"></i> নতুন ফর্দ বানান
+                </button>
+            </div>
+
+            <div id="bazar-lists-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Dynamically Rendered Bazar Cards -->
+            </div>
+        </div>
+
+        <!-- TABLES: INCOMES & EXPENSES -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Income Table -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-3">
+                <div class="flex justify-between items-center">
+                    <h4 class="font-bold text-sm text-slate-800">আয় / জমা তালিকা</h4>
+                    <span id="income-count-tag" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">০ টি</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="p-2">তারিখ</th>
+                                <th class="p-2">বিবরণ</th>
+                                <th class="p-2">সদস্য</th>
+                                <th class="p-2">পরিমাণ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="income-table-body">
+                            <!-- Dynamically Rendered -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Expense Table -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-3">
+                <div class="flex justify-between items-center">
+                    <h4 class="font-bold text-sm text-slate-800">খরচের তালিকা</h4>
+                    <span id="expense-count-tag" class="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold">০ টি</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="p-2">তারিখ</th>
+                                <th class="p-2">বিবরণ</th>
+                                <th class="p-2">খাত</th>
+                                <th class="p-2">পরিমাণ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expense-table-body">
+                            <!-- Dynamically Rendered -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL: ADD BAZAR LIST (WITH DRAFT SUPPORT & FRACTIONAL WEIGHTS) -->
+    <div id="modal-add-bazar" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">নতুন বাজারের ফর্দ তৈরি করুন</h3>
+                <button onclick="closeModal('modal-add-bazar')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form id="form-add-bazar" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">ফর্দ শিরোনাম</label>
+                        <input type="text" id="bazar-title" placeholder="যেমন: সাপ্তাহিক কাঁচা বাজার" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">তালিকার ধরন</label>
+                        <select id="bazar-type" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                            <option value="family">পারিবারিক বাজার</option>
+                            <option value="personal">পারসোনাল বাজার</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">বাজার কে করবেন?</label>
+                    <select id="bazar-assignee" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                        <!-- Dynamically Populated -->
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-600">পণ্যের নাম ও পরিমাণ (যেমন: ২০০ গ্রাম, ১০০ গ্রাম, ১/২ কেজি)</label>
+                    <div id="bazar-items-inputs" class="space-y-2">
+                        <div class="flex gap-2">
+                            <input type="text" placeholder="পণ্যের নাম (যেমন: জিরা)" required class="item-name flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                            <input type="text" placeholder="পরিমাণ (২০০ গ্রাম)" required class="item-qty w-36 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                    <button type="button" onclick="addBazarItemRow()" class="text-xs font-bold text-emerald-600 hover:underline">+ আরো পণ্য যোগ করুন</button>
+                </div>
+
+                <!-- Action Buttons: Save as Draft vs Publish -->
+                <div class="flex gap-2 pt-2 border-t">
+                    <button type="button" onclick="handleCreateBazar(event, true)" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-floppy-disk"></i> খসড়া (Draft) রাখুন
+                    </button>
+                    <button type="button" onclick="handleCreateBazar(event, false)" class="w-1/2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-paper-plane"></i> বাজারে পাঠান
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: FULFILL BAZAR / MEMO ENTRY -->
+    <div id="modal-fulfill-bazar" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-base text-slate-800">বাজার কেনাকাটা ও মেমো দেওয়া</h3>
+                    <p class="text-xs text-slate-400">যেসব পণ্য কেনা হয়েছে চেক দিন এবং প্রকৃত খরচ লিখুন</p>
+                </div>
+                <button onclick="closeModal('modal-fulfill-bazar')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <input type="hidden" id="fulfill-bazar-id">
+            <div id="fulfill-items-container" class="space-y-3">
+                <!-- Dynamically Populated Item Rows -->
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-xl flex justify-between items-center border">
+                <span class="font-bold text-sm text-slate-700">মোট খরচ:</span>
+                <span id="fulfill-total-price" class="font-extrabold text-emerald-600 text-lg">৳০</span>
+            </div>
+
+            <button onclick="submitBazarFulfillment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                সম্পন্ন করুন ও খরচে যুক্ত করুন
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD INCOME -->
+    <div id="modal-add-income" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">আয় / জমা যুক্ত করুন</h3>
+                <button onclick="closeModal('modal-add-income')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleAddIncome(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">তারিখ</label>
+                    <input type="date" id="inc-date" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">আয়ের বিবরণ</label>
+                    <input type="text" id="inc-title" placeholder="যেমন: মাসিক বেতন" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">টাকার পরিমাণ</label>
+                    <input type="number" id="inc-amount" placeholder="০০.০০" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">আয়ের ধরন</label>
+                    <select id="inc-type" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                        <option value="family">পারিবারিক জমা</option>
+                        <option value="personal">পারসোনাল আয়</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">সেভ করুন</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD EXPENSE -->
+    <div id="modal-add-expense" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">খরচ যুক্ত করুন</h3>
+                <button onclick="closeModal('modal-add-expense')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleAddExpense(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">তারিখ</label>
+                    <input type="date" id="exp-date" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">খরচের বিবরণ</label>
+                    <input type="text" id="exp-title" placeholder="যেমন: বাসা ভাড়া / বিদ্যুৎ বিল" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">খরচের খাত (Category)</label>
+                    <select id="exp-category" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                        <option value="বাজার">বাজার</option>
+                        <option value="বাসা ভাড়া">বাসা ভাড়া</option>
+                        <option value="ইউটিলিটি বিল">ইউটিলিটি বিল</option>
+                        <option value="চিকিৎসা">চিকিৎসা</option>
+                        <option value="শিক্ষা">শিক্ষা</option>
+                        <option value="অন্যান্য">অন্যান্য</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">টাকার পরিমাণ</label>
+                    <input type="number" id="exp-amount" placeholder="০০.০০" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">খরচের ধরন</label>
+                    <select id="exp-type" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                        <option value="family">পারিবারিক খরচ</option>
+                        <option value="personal">পারসোনাল খরচ</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-sm transition">সেভ করুন</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SET BUDGET -->
+    <div id="modal-set-budget" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">পারিবারিক বাজেট নির্ধারণ</h3>
+                <button onclick="closeModal('modal-set-budget')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleSetBudget(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">চলতি মাসের বাজেট (টাকা)</label>
+                    <input type="number" id="input-budget-amount" placeholder="যেমন: ৪৫০০০" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition">বাজেট সেভ করুন</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD MEMBER -->
+    <div id="modal-add-member" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">পরিবারে নতুন সদস্য যুক্ত করুন</h3>
+                <button onclick="closeModal('modal-add-member')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleAddMember(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">সদস্যের নাম</label>
+                    <input type="text" id="member-name" placeholder="যেমন: নাসরিন সুলতানা" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">মোবাইল নম্বর</label>
+                    <input type="text" id="member-phone" placeholder="০১৭xxxxxxxx" required class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">যুক্ত করুন</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: MONTHLY REPORT -->
+    <div id="modal-monthly-report" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">মাসিক ফাইনাল রিপোর্ট</h3>
+                <button onclick="closeModal('modal-monthly-report')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="monthly-report-content" class="space-y-3">
+                <!-- Dynamically Rendered Report Summary -->
+            </div>
+            <button onclick="sendReportToAllMembers()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> পরিবারের সকলকে নোটিফিকেশন পাঠান
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: NOTIFICATIONS -->
+    <div id="modal-notifications" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-base text-slate-800">নোটিফিকেশন প্যানেল</h3>
+                <button onclick="toggleNotificationModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="notifications-list" class="space-y-2">
+                <!-- Dynamically Rendered Notifications -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main JS File -->
+    <script src="script.js"></script>
+</body>
+</html>
