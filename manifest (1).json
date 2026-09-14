@@ -1,0 +1,19 @@
+{
+  "background_color": "#94e157",
+  "dir": "auto",
+  "display": "minimal-ui",
+  "name": "Budget Tracker",
+  "orientation": "natural",
+  "scope": "https://budget-tracker-dusky-nine.vercel.app",
+  "short_name": "budget_tracker",
+  "start_url": "/budget",
+  "theme_color": "#b1f09e",
+  "display_override": [
+    "window-controls-overlay"
+  ],
+  "prefer_related_applications": true,
+  "categories": [
+    "finance",
+    "lifestyle"
+  ]
+}
