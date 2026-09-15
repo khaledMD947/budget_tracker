@@ -1,15 +1,15 @@
 // ==========================================================================
+/// ==========================================================================
 // 1. FIREBASE CONFIGURATION & INITIALIZATION
 // ==========================================================================
-// আপনার ফায়ারবেস কনসোল (Firebase Console) থেকে ক্রেডেনশিয়াল বসিয়ে দিন
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
+    apiKey: "AIzaSyAg4jQhz2D1m5U_PF1x_f6WyRgwdv_2quQ",
+    authDomain: "budget-tracker-d6a57.firebaseapp.com",
+    databaseURL: "https://budget-tracker-d6a57-default-rtdb.firebaseio.com", // আপনার Realtime Database URL
+    projectId: "budget-tracker-d6a57",
+    storageBucket: "budget-tracker-d6a57.firebasestorage.app",
+    messagingSenderId: "1005292942393",
+    appId: "1:1005292942393:web:3c3c151bbf79c519ea49e8"
 };
 
 // Initialize Firebase
